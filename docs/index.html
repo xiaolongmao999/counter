@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>简约计数器</title>
     <style>
+        /* 样式部分保持不变 */
         body {
             display: flex;
             justify-content: center;
@@ -190,8 +191,8 @@
 
     <script>
         // 初始化变量
-        let count = 0;
-        let step = 1; // 默认步长为 1
+        let count = localStorage.getItem('count') ? parseInt(localStorage.getItem('count'), 10) : 0;
+        let step = localStorage.getItem('step') ? parseInt(localStorage.getItem('step'), 10) : 1;
         const countDisplay = document.getElementById('count');
         const stepInput = document.getElementById('stepInput');
 
@@ -201,10 +202,18 @@
         const incrementBtn = document.getElementById('incrementBtn');
         const setStepBtn = document.getElementById('setStepBtn');
 
+        // 初始化显示
+        function initializeDisplay() {
+            countDisplay.textContent = count;
+            stepInput.value = step;
+            countDisplay.classList.toggle('negative', count < 0);
+        }
+
         // 更新显示
         function updateDisplay() {
             countDisplay.textContent = count;
             countDisplay.classList.toggle('negative', count < 0);
+            localStorage.setItem('count', count); // 保存计数到 localStorage
         }
 
         // 修改计数
@@ -222,8 +231,9 @@
         // 设置步长
         function setStep() {
             const newStep = parseInt(stepInput.value, 10);
-            if (!isNaN(newStep) && newStep > 0) {
+            if (!isNaN(newStep)) {
                 step = newStep;
+                localStorage.setItem('step', step); // 保存步长到 localStorage
             } else {
                 alert('请输入有效的步长值（必须为正数）');
             }
@@ -243,6 +253,9 @@
                 changeCount(-step);
             }
         });
+
+        // 初始化页面
+        initializeDisplay();
     </script>
 </body>
 
