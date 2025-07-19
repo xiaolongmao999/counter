@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>简约计数器</title>
     <style>
-        /* 样式部分保持不变 */
         body {
             display: flex;
             justify-content: center;
@@ -134,6 +133,22 @@
             background-color: #2980b9;
         }
 
+        /* 新增的时间显示样式 */
+        .time-display {
+            margin-top: 1.5rem;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            padding: 0.8rem;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            min-height: 20px;
+        }
+
+        .time-label {
+            font-weight: bold;
+            color: #3498db;
+        }
+
         @media (max-width: 480px) {
             .counter-container {
                 padding: 1.5rem;
@@ -155,7 +170,6 @@
 
             .key-hint {
                 display: none;
-                /* 在移动端隐藏键盘提示 */
             }
 
             .step-control {
@@ -169,13 +183,19 @@
             .step-control button {
                 width: 100%;
             }
+
+            .time-display {
+                margin-top: 1rem;
+                font-size: 0.8rem;
+                padding: 0.6rem;
+            }
         }
     </style>
 </head>
 
 <body>
     <div class="counter-container">
-        <div class="counter-title">计数器</div>
+        <div class="counter-title">简约计数器</div>
         <div class="counter-display" id="count">0</div>
         <div class="button-group">
             <button class="counter-btn decrement" id="decrementBtn">-</button>
@@ -186,6 +206,13 @@
             <input type="number" id="stepInput" value="1" min="1">
             <button id="setStepBtn">设置步长</button>
         </div>
+
+        <!-- 新增的时间显示区域 -->
+        <div class="time-display" id="timeDisplay">
+            <span class="time-label">上次操作时间：</span>
+            <span id="lastOperationTime">暂无操作</span>
+        </div>
+
         <div class="key-hint">使用键盘 ↑ ↓ 控制</div>
     </div>
 
@@ -195,6 +222,7 @@
         let step = localStorage.getItem('step') ? parseInt(localStorage.getItem('step'), 10) : 1;
         const countDisplay = document.getElementById('count');
         const stepInput = document.getElementById('stepInput');
+        const lastOperationTime = document.getElementById('lastOperationTime');
 
         // 获取按钮元素
         const decrementBtn = document.getElementById('decrementBtn');
@@ -207,6 +235,12 @@
             countDisplay.textContent = count;
             stepInput.value = step;
             countDisplay.classList.toggle('negative', count < 0);
+
+            // 从localStorage加载上次操作时间
+            const savedTime = localStorage.getItem('lastOperationTime');
+            if (savedTime) {
+                lastOperationTime.textContent = savedTime;
+            }
         }
 
         // 更新显示
@@ -220,6 +254,9 @@
         function changeCount(amount) {
             count += amount;
             updateDisplay();
+
+            // 更新操作时间
+            updateOperationTime();
         }
 
         // 重置计数
@@ -237,6 +274,23 @@
             } else {
                 alert('请输入有效的步长值（必须为正数）');
             }
+        }
+
+        // 更新操作时间
+        function updateOperationTime() {
+            const now = new Date();
+            const formattedTime = now.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+
+            lastOperationTime.textContent = formattedTime;
+            localStorage.setItem('lastOperationTime', formattedTime);
         }
 
         // 绑定按钮事件
