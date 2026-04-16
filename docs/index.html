@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>简约计数器</title>
+    <title>简约计数器 (含每日计数)</title>
     <style>
         body {
             display: flex;
@@ -133,7 +133,7 @@
             background-color: #2980b9;
         }
 
-        /* 新增的时间显示样式 */
+        /* 时间显示样式 */
         .time-display {
             margin-top: 1.5rem;
             color: #7f8c8d;
@@ -147,6 +147,60 @@
         .time-label {
             font-weight: bold;
             color: #3498db;
+        }
+
+        /* 新增的每日计数显示样式 */
+        .daily-count-container {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .daily-count-title {
+            color: #2c3e50;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .daily-count-display {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #e67e22;
+            padding: 0.5rem;
+        }
+
+        .count-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .toggle-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            background-color: #dfe6e9;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn.active {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .toggle-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* 重置时间显示样式 */
+        .reset-time {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            margin-top: 0.5rem;
         }
 
         @media (max-width: 480px) {
@@ -189,90 +243,208 @@
                 font-size: 0.8rem;
                 padding: 0.6rem;
             }
+
+            .daily-count-display {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
 
 <body>
     <div class="counter-container">
-        <div class="counter-title">简约计数器</div>
+        <div class="counter-title">简约计数器 (含每日计数)</div>
+        
+        <!-- 计数切换按钮 -->
+        <div class="count-toggle">
+            <button class="toggle-btn active" id="totalToggle">总计数</button>
+            <button class="toggle-btn" id="dailyToggle">今日计数</button>
+        </div>
+        
+        <!-- 计数显示区域 -->
         <div class="counter-display" id="count">0</div>
+        
+        <!-- 按钮组 -->
         <div class="button-group">
             <button class="counter-btn decrement" id="decrementBtn">-</button>
             <button class="counter-btn reset" id="resetBtn">清空</button>
             <button class="counter-btn increment" id="incrementBtn">+</button>
         </div>
+        
+        <!-- 步长控制 -->
         <div class="step-control">
             <input type="number" id="stepInput" value="1" min="1">
             <button id="setStepBtn">设置步长</button>
         </div>
 
-        <!-- 新增的时间显示区域 -->
+        <!-- 每日计数显示区域 -->
+        <div class="daily-count-container">
+            <div class="daily-count-title">今日计数</div>
+            <div class="daily-count-display" id="dailyCount">0</div>
+            <div class="reset-time" id="nextResetTime"></div>
+        </div>
+
+        <!-- 操作时间显示区域 -->
         <div class="time-display" id="timeDisplay">
             <span class="time-label">上次操作时间：</span>
             <span id="lastOperationTime">暂无操作</span>
         </div>
 
-        <div class="key-hint">使用键盘 ↑ ↓ 控制</div>
+        <div class="key-hint">使用键盘 ↑ ↓ 控制，空格键切换总计数/今日计数</div>
     </div>
 
     <script>
         // 初始化变量
         let count = localStorage.getItem('count') ? parseInt(localStorage.getItem('count'), 10) : 0;
         let step = localStorage.getItem('step') ? parseInt(localStorage.getItem('step'), 10) : 1;
+        let dailyCount = 0;
+        let lastOperationTime = "";
+        let today = new Date().toDateString(); // 获取今天的日期字符串
+        let isShowingTotal = true; // 默认显示总计数
+        
+        // 获取DOM元素
         const countDisplay = document.getElementById('count');
         const stepInput = document.getElementById('stepInput');
-        const lastOperationTime = document.getElementById('lastOperationTime');
-
+        const lastOperationTimeDisplay = document.getElementById('lastOperationTime');
+        const dailyCountDisplay = document.getElementById('dailyCount');
+        const nextResetTimeDisplay = document.getElementById('nextResetTime');
+        
         // 获取按钮元素
         const decrementBtn = document.getElementById('decrementBtn');
         const resetBtn = document.getElementById('resetBtn');
         const incrementBtn = document.getElementById('incrementBtn');
         const setStepBtn = document.getElementById('setStepBtn');
+        const totalToggle = document.getElementById('totalToggle');
+        const dailyToggle = document.getElementById('dailyToggle');
 
-        // 初始化显示
-        function initializeDisplay() {
-            countDisplay.textContent = count;
-            stepInput.value = step;
-            countDisplay.classList.toggle('negative', count < 0);
-
-            // 从localStorage加载上次操作时间
-            const savedTime = localStorage.getItem('lastOperationTime');
-            if (savedTime) {
-                lastOperationTime.textContent = savedTime;
+        // 从本地存储加载数据
+        function loadFromStorage() {
+            // 加载总计数
+            const savedCount = localStorage.getItem('count');
+            if (savedCount !== null) {
+                count = parseInt(savedCount, 10);
+            }
+            
+            // 加载步长
+            const savedStep = localStorage.getItem('step');
+            if (savedStep !== null) {
+                step = parseInt(savedStep, 10);
+            }
+            
+            // 加载上次操作时间
+            const savedOperationTime = localStorage.getItem('lastOperationTime');
+            if (savedOperationTime) {
+                lastOperationTime = savedOperationTime;
+            }
+            
+            // 加载每日计数数据
+            const savedDailyData = localStorage.getItem('dailyCountData');
+            if (savedDailyData) {
+                try {
+                    const dailyData = JSON.parse(savedDailyData);
+                    const savedDate = dailyData.date;
+                    const savedDailyCount = dailyData.count;
+                    
+                    // 如果保存的日期是今天，则加载每日计数
+                    if (savedDate === today) {
+                        dailyCount = savedDailyCount;
+                    } else {
+                        // 如果不是今天，重置每日计数
+                        dailyCount = 0;
+                        saveDailyCount();
+                    }
+                } catch (e) {
+                    console.error("解析每日计数数据失败:", e);
+                    dailyCount = 0;
+                }
+            } else {
+                dailyCount = 0;
             }
         }
 
-        // 更新显示
-        function updateDisplay() {
-            countDisplay.textContent = count;
-            countDisplay.classList.toggle('negative', count < 0);
-            localStorage.setItem('count', count); // 保存计数到 localStorage
+        // 保存每日计数到本地存储
+        function saveDailyCount() {
+            const dailyData = {
+                date: today,
+                count: dailyCount
+            };
+            localStorage.setItem('dailyCountData', JSON.stringify(dailyData));
+        }
+
+        // 初始化显示
+        function initializeDisplay() {
+            // 加载存储的数据
+            loadFromStorage();
+            
+            // 更新显示
+            updateCountDisplay();
+            stepInput.value = step;
+            dailyCountDisplay.textContent = dailyCount;
+            
+            // 更新上次操作时间显示
+            if (lastOperationTime) {
+                lastOperationTimeDisplay.textContent = lastOperationTime;
+            }
+            
+            // 计算并显示下次重置时间
+            updateNextResetTime();
+            
+            // 设置每日重置检查
+            setDailyResetCheck();
+        }
+
+        // 更新计数显示
+        function updateCountDisplay() {
+            if (isShowingTotal) {
+                countDisplay.textContent = count;
+                countDisplay.classList.toggle('negative', count < 0);
+            } else {
+                countDisplay.textContent = dailyCount;
+                countDisplay.classList.toggle('negative', dailyCount < 0);
+            }
+            
+            // 更新每日计数显示
+            dailyCountDisplay.textContent = dailyCount;
         }
 
         // 修改计数
         function changeCount(amount) {
             count += amount;
-            updateDisplay();
-
+            dailyCount += amount;
+            
+            // 保存到本地存储
+            localStorage.setItem('count', count);
+            saveDailyCount();
+            
+            // 更新显示
+            updateCountDisplay();
+            
             // 更新操作时间
             updateOperationTime();
         }
 
         // 重置计数
         function resetCount() {
-            count = 0;
-            updateDisplay();
+            if (isShowingTotal) {
+                count = 0;
+                localStorage.setItem('count', 0);
+            } else {
+                dailyCount = 0;
+                saveDailyCount();
+            }
+            
+            updateCountDisplay();
         }
 
         // 设置步长
         function setStep() {
             const newStep = parseInt(stepInput.value, 10);
-            if (!isNaN(newStep)) {
+            if (!isNaN(newStep) && newStep > 0) {
                 step = newStep;
-                localStorage.setItem('step', step); // 保存步长到 localStorage
+                localStorage.setItem('step', step);
             } else {
                 alert('请输入有效的步长值（必须为正数）');
+                stepInput.value = step;
             }
         }
 
@@ -289,8 +461,66 @@
                 hour12: false
             });
 
-            lastOperationTime.textContent = formattedTime;
+            lastOperationTime = formattedTime;
+            lastOperationTimeDisplay.textContent = formattedTime;
             localStorage.setItem('lastOperationTime', formattedTime);
+        }
+
+        // 更新下次重置时间
+        function updateNextResetTime() {
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+            
+            const timeUntilReset = tomorrow - now;
+            const hours = Math.floor(timeUntilReset / (1000 * 60 * 60));
+            const minutes = Math.floor((timeUntilReset % (1000 * 60 * 60)) / (1000 * 60));
+            
+            nextResetTimeDisplay.textContent = `下次重置: ${hours}小时${minutes}分钟后 (每日0点)`;
+        }
+
+        // 检查并执行每日重置
+        function checkAndResetDailyCount() {
+            const currentDate = new Date().toDateString();
+            
+            if (currentDate !== today) {
+                // 日期已变化，重置每日计数
+                today = currentDate;
+                dailyCount = 0;
+                saveDailyCount();
+                updateCountDisplay();
+                
+                // 更新下次重置时间显示
+                updateNextResetTime();
+            }
+        }
+
+        // 设置每日重置检查定时器
+        function setDailyResetCheck() {
+            // 立即检查一次
+            checkAndResetDailyCount();
+            
+            // 每分钟检查一次日期变化
+            setInterval(checkAndResetDailyCount, 60000);
+            
+            // 每分钟更新一次下次重置时间显示
+            setInterval(updateNextResetTime, 60000);
+        }
+
+        // 切换显示总计数/今日计数
+        function toggleDisplay(showTotal) {
+            isShowingTotal = showTotal;
+            
+            if (showTotal) {
+                totalToggle.classList.add('active');
+                dailyToggle.classList.remove('active');
+            } else {
+                totalToggle.classList.remove('active');
+                dailyToggle.classList.add('active');
+            }
+            
+            updateCountDisplay();
         }
 
         // 绑定按钮事件
@@ -298,6 +528,10 @@
         resetBtn.addEventListener('click', resetCount);
         incrementBtn.addEventListener('click', () => changeCount(step));
         setStepBtn.addEventListener('click', setStep);
+        
+        // 绑定切换按钮事件
+        totalToggle.addEventListener('click', () => toggleDisplay(true));
+        dailyToggle.addEventListener('click', () => toggleDisplay(false));
 
         // 键盘事件监听
         document.addEventListener('keydown', (e) => {
@@ -305,6 +539,13 @@
                 changeCount(step);
             } else if (e.key === 'ArrowDown') {
                 changeCount(-step);
+            } else if (e.key === ' ') {
+                // 空格键切换显示
+                e.preventDefault(); // 防止页面滚动
+                toggleDisplay(!isShowingTotal);
+            } else if (e.key === 'r' || e.key === 'R') {
+                // R键重置当前显示的计数
+                resetCount();
             }
         });
 
