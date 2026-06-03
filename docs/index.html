@@ -534,21 +534,70 @@
         dailyToggle.addEventListener('click', () => toggleDisplay(false));
 
         // 键盘事件监听
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowUp') {
-                changeCount(step);
-            } else if (e.key === 'ArrowDown') {
-                changeCount(-step);
-            } else if (e.key === ' ') {
-                // 空格键切换显示
-                e.preventDefault(); // 防止页面滚动
-                toggleDisplay(!isShowingTotal);
-            } else if (e.key === 'r' || e.key === 'R') {
-                // R键重置当前显示的计数
-                resetCount();
-            }
-        });
+        // document.addEventListener('keydown', (e) => {
+        //     if (e.key === 'ArrowUp') {
+        //         changeCount(step);
+        //     } else if (e.key === 'ArrowDown') {
+        //         changeCount(-step);
+        //     } else if (e.key === ' ') {
+        //         // 空格键切换显示
+        //         e.preventDefault(); // 防止页面滚动
+        //         toggleDisplay(!isShowingTotal);
+        //     } else if (e.key === 'r' || e.key === 'R') {
+        //         // R键重置当前显示的计数
+        //         resetCount();
+        //     }
+        // });
+ // 判断是否为手机音量键
+  function isVolumeKey(e) {
+    const key = e.key || '';
+    const code = e.code || '';
+    const keyCode = e.keyCode || e.which;
 
+    const volumeUp =
+      key === 'AudioVolumeUp' ||
+      key === 'VolumeUp' ||
+      code === 'AudioVolumeUp' ||
+      keyCode === 24;
+
+    const volumeDown =
+      key === 'AudioVolumeDown' ||
+      key === 'VolumeDown' ||
+      code === 'AudioVolumeDown' ||
+      keyCode === 25;
+
+    return { volumeUp, volumeDown };
+  }
+
+  // 键盘事件监听
+  document.addEventListener('keydown', (e) => {
+    const { volumeUp, volumeDown } = isVolumeKey(e);
+
+    // 手机音量键：加减计数
+    if (volumeUp) {
+      e.preventDefault();
+      changeCount(step);
+      return;
+    }
+
+    if (volumeDown) {
+      e.preventDefault();
+      changeCount(-step);
+      return;
+    }
+
+    // 原有键盘控制
+    if (e.key === 'ArrowUp') {
+      changeCount(step);
+    } else if (e.key === 'ArrowDown') {
+      changeCount(-step);
+    } else if (e.key === ' ') {
+      e.preventDefault();
+      toggleDisplay(!isShowingTotal);
+    } else if (e.key === 'r' || e.key === 'R') {
+      resetCount();
+    }
+  });
         // 初始化页面
         initializeDisplay();
     </script>
